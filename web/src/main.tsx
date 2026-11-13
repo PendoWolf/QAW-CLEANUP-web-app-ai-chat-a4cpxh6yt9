@@ -5,6 +5,14 @@ import App from "./App";
 import { AuthProvider } from "./auth/AuthContext";
 import "./styles.css";
 
+// Boot the Novus by Pendo SDK once, with an anonymous visitor. The signed-in user
+// is identified in AuthProvider once their session is available.
+pendo.initialize({
+  visitor: {
+    id: "",
+  },
+});
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
