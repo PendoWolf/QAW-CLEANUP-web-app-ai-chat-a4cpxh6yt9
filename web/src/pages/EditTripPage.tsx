@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { TRACK_EVENTS, errorStatus, trackEvent, tripDays } from "../analytics/pendo";
 import { tripsApi, type NewTrip, type Trip } from "../api/trips";
 import { TripForm } from "../components/TripForm";
 
@@ -14,15 +15,36 @@ export function EditTripPage() {
     tripsApi
       .get(tripId)
       .then(setTrip)
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error) => {
+        trackEvent(TRACK_EVENTS.tripSaveFailed, {
+          operation: "load",
+          trip_id: tripId,
+          status_code: errorStatus(e),
+        });
+        setError(e.message);
+      });
   }, [tripId]);
 
   const saveTrip = async (changes: NewTrip) => {
     try {
       setError(null);
       await tripsApi.update(tripId, changes);
+      // The API saved the trip changes; the person goes back to the trip list.
+      trackEvent(TRACK_EVENTS.tripUpdated, {
+        trip_id: tripId,
+        travelers: changes.travelers,
+        trip_days: tripDays(changes.startDate, changes.endDate),
+        destination_changed: trip !== null && changes.destination !== trip.destination,
+        dates_changed:
+          trip !== null && (changes.startDate !== trip.startDate || changes.endDate !== trip.endDate),
+      });
       navigate("/trips");
     } catch (e) {
+      trackEvent(TRACK_EVENTS.tripSaveFailed, {
+        operation: "update",
+        trip_id: tripId,
+        status_code: errorStatus(e),
+      });
       setError((e as Error).message);
     }
   };
